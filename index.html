@@ -1,0 +1,159 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Portfolio — Yasier</title>
+  <style>
+    :root { --max: 1100px; --pad: 18px; }
+    body { margin:0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; line-height:1.45; background:#0b0b0c; color:#f3f3f3; }
+    a { color: inherit; text-decoration: none; opacity:.9; }
+    header { position: sticky; top:0; backdrop-filter: blur(10px); background: rgba(11,11,12,.72); border-bottom:1px solid rgba(255,255,255,.08); z-index:10;}
+    .wrap { max-width: var(--max); margin: 0 auto; padding: 0 var(--pad); }
+    .top { display:flex; align-items:center; justify-content:space-between; padding: 14px 0; gap:12px; }
+    .name { font-weight:700; letter-spacing:.2px; }
+    .nav { display:flex; gap:10px; flex-wrap: wrap; }
+    .chip { padding:8px 10px; border:1px solid rgba(255,255,255,.14); border-radius:999px; font-size:13px; }
+    .hero { padding: 34px 0 10px; }
+    h1 { font-size: 34px; margin: 0 0 10px; }
+    .sub { opacity:.85; max-width: 70ch; }
+    .sectionTitle { margin: 28px 0 10px; font-size: 18px; opacity:.9; }
+    .project { display:grid; grid-template-columns: 1.05fr .95fr; gap:18px; padding: 18px; margin: 14px 0; border:1px solid rgba(255,255,255,.10); border-radius: 18px; background: rgba(255,255,255,.03); }
+    .meta { opacity:.85; font-size: 13px; margin: 6px 0 10px; }
+    .bullets { margin: 0; padding-left: 18px; opacity:.95; }
+    .tags { display:flex; flex-wrap:wrap; gap:8px; margin-top: 10px; }
+    .tag { font-size: 12px; padding: 6px 10px; border-radius: 999px; background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.10); opacity:.9; }
+
+    /* Carrusel horizontal */
+    .carousel { position: relative; }
+    .track { display:flex; overflow-x:auto; gap:10px; scroll-snap-type: x mandatory; -webkit-overflow-scrolling: touch; padding-bottom: 8px; }
+    .track::-webkit-scrollbar { height: 10px; }
+    .track::-webkit-scrollbar-thumb { background: rgba(255,255,255,.18); border-radius: 999px; }
+    .slide { flex: 0 0 86%; scroll-snap-align: start; border-radius: 14px; overflow:hidden; border:1px solid rgba(255,255,255,.10); background:#111; }
+    .slide img { width:100%; height:auto; display:block; }
+
+    /* Controles opcionales (desktop) */
+    .controls { display:flex; gap:10px; margin-top: 10px; }
+    button { cursor:pointer; border-radius: 12px; padding:10px 12px; border:1px solid rgba(255,255,255,.14); background: rgba(255,255,255,.06); color:#fff; }
+    button:hover { background: rgba(255,255,255,.10); }
+
+    /* Responsive */
+    @media (max-width: 860px) {
+      .project { grid-template-columns: 1fr; }
+      .slide { flex-basis: 92%; }
+      h1 { font-size: 28px; }
+    }
+    footer { padding: 30px 0 40px; opacity:.85; }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="wrap top">
+      <div class="name">Yasier — Delineante / CAD</div>
+      <nav class="nav">
+        <a class="chip" href="#corporativa">Imagen corporativa</a>
+        <a class="chip" href="#mecanica">Mecánica</a>
+        <a class="chip" href="#contacto">Contacto</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <section class="hero">
+      <h1>Portfolio</h1>
+      <p class="sub">Proyectos seleccionados de delineación y CAD (documentación técnica, planos, despiece, ensambles e implantaciones). Optimizado para móvil.</p>
+    </section>
+
+    <h2 id="corporativa" class="sectionTitle">Imagen corporativa</h2>
+
+    <!-- PROYECTO 1 -->
+    <article class="project">
+      <div>
+        <h3 style="margin:0">Proyecto: Implantación / Señalética — (Cliente o “Confidencial”)</h3>
+        <div class="meta">2025 · Rol: Delineación + planos · Herramientas: AutoCAD / (lo que uses)</div>
+        <ul class="bullets">
+          <li>Planos de implantación y montaje</li>
+          <li>Detalles constructivos y cotas</li>
+          <li>Entrega lista para fabricación/instalación</li>
+        </ul>
+        <div class="tags">
+          <span class="tag">Planos 2D</span><span class="tag">Implantación</span><span class="tag">Montaje</span>
+        </div>
+      </div>
+      <div class="carousel" data-images='[
+        "img/corporativa_01/01.webp",
+        "img/corporativa_01/02.webp",
+        "img/corporativa_01/03.webp",
+        "img/corporativa_01/04.webp"
+      ]'></div>
+    </article>
+
+    <h2 id="mecanica" class="sectionTitle">Mecánica / Industrial</h2>
+
+    <!-- PROYECTO 2 -->
+    <article class="project">
+      <div>
+        <h3 style="margin:0">Proyecto: Ensamble mecánico — (Cliente o “Confidencial”)</h3>
+        <div class="meta">2024 · Rol: Modelado + despiece · Herramientas: SolidWorks</div>
+        <ul class="bullets">
+          <li>Modelado 3D de conjunto y piezas</li>
+          <li>Planos de fabricación y despiece</li>
+          <li>Revisión de interferencias/montaje</li>
+        </ul>
+        <div class="tags">
+          <span class="tag">3D</span><span class="tag">Ensamble</span><span class="tag">Despiece</span>
+        </div>
+      </div>
+      <div class="carousel" data-images='[
+        "img/mecanica_01/01.webp",
+        "img/mecanica_01/02.webp",
+        "img/mecanica_01/03.webp"
+      ]'></div>
+    </article>
+
+    <h2 id="contacto" class="sectionTitle">Contacto</h2>
+    <footer>
+      <div>Email: tu@email.com · Tel/WhatsApp: +34 XXX XXX XXX</div>
+      <div style="margin-top:8px">Alcalá de Henares · Madrid</div>
+    </footer>
+  </main>
+
+  <script>
+    // Renderiza carruseles leyendo el atributo data-images
+    document.querySelectorAll('.carousel').forEach((c) => {
+      const imgs = JSON.parse(c.getAttribute('data-images') || '[]');
+      const track = document.createElement('div');
+      track.className = 'track';
+
+      imgs.forEach((src) => {
+        const slide = document.createElement('div');
+        slide.className = 'slide';
+        const img = document.createElement('img');
+        img.loading = 'lazy';
+        img.src = src;
+        img.alt = '';
+        slide.appendChild(img);
+        track.appendChild(slide);
+      });
+
+      c.appendChild(track);
+
+      // Controles (útiles en PC)
+      const controls = document.createElement('div');
+      controls.className = 'controls';
+      const prev = document.createElement('button');
+      prev.textContent = '←';
+      const next = document.createElement('button');
+      next.textContent = '→';
+
+      const scrollBy = () => Math.min(track.clientWidth * 0.9, 900);
+      prev.onclick = () => track.scrollBy({ left: -scrollBy(), behavior: 'smooth' });
+      next.onclick = () => track.scrollBy({ left:  scrollBy(), behavior: 'smooth' });
+
+      controls.appendChild(prev);
+      controls.appendChild(next);
+      c.appendChild(controls);
+    });
+  </script>
+</body>
+</html>
