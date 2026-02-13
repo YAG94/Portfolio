@@ -327,16 +327,25 @@ document.addEventListener('DOMContentLoaded', () => {
   lbPrev.addEventListener('click', prevLB);
   lbNext.addEventListener('click', nextLB);
 
-  lb.addEventListener('click', (e) => {
-    if (e.target === lb) closeLB();
-  });
+  // Fix móvil: que los botones funcionen aunque el lightbox haga preventDefault en touch
+lbClose.addEventListener('touchstart', (e) => {
+  e.preventDefault();
+  e.stopPropagation();
+  closeLB();
+}, { passive: false });
 
-  document.addEventListener('keydown', (e) => {
-    if (!lb.classList.contains('open')) return;
-    if (e.key === 'Escape') closeLB();
-    if (e.key === 'ArrowLeft') prevLB();
-    if (e.key === 'ArrowRight') nextLB();
-  });
+lbPrev.addEventListener('touchstart', (e) => {
+  e.preventDefault();
+  e.stopPropagation();
+  prevLB();
+}, { passive: false });
+
+lbNext.addEventListener('touchstart', (e) => {
+  e.preventDefault();
+  e.stopPropagation();
+  nextLB();
+}, { passive: false });
+
 
   // ======================
   // 4) Gestos: pinch zoom + pan + swipe solo en borde cuando hay zoom
