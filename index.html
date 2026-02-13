@@ -343,45 +343,27 @@ document.addEventListener('DOMContentLoaded', () => {
   lbNext.addEventListener('touchstart', (e) => { e.preventDefault(); e.stopPropagation(); nextLB(); }, { passive: false });
 
   // ======================
-  // ✅ RESET SOLO CUANDO CAMBIA LA ORIENTACIÓN (no por pinch-zoom)
+  // ✅ CERRAR AUTOMÁTICAMENTE EL LIGHTBOX AL GIRAR EL MÓVIL
+  // (mucho más fiable que resetear)
   // ======================
-  function resetViewOnRotate() {
+  function closeOnRotate() {
     if (!lb.classList.contains('open')) return;
-
-    userInteracted = false;
-    resetZoom();
-
-    requestAnimationFrame(() => {
-      measureBaseSize();
-      resetZoom();
-      requestAnimationFrame(() => {
-        measureBaseSize();
-        resetZoom();
-      });
-    });
+    // pequeño delay para que el navegador termine de aplicar el giro
+    setTimeout(() => closeLB(), 80);
   }
 
-  let rotateTimer = null;
-  function scheduleResetOnRotate() {
-    clearTimeout(rotateTimer);
-    rotateTimer = setTimeout(resetViewOnRotate, 200);
+  // 1) Evento clásico (muchos móviles)
+  window.addEventListener('orientationchange', closeOnRotate);
+
+  // 2) API moderna (Chrome/Android y algunos)
+  if (screen.orientation && screen.orientation.addEventListener) {
+    screen.orientation.addEventListener('change', closeOnRotate);
   }
 
-  let lastPortrait = window.matchMedia('(orientation: portrait)').matches;
-
-  window.addEventListener('orientationchange', () => {
-    lastPortrait = window.matchMedia('(orientation: portrait)').matches;
-    scheduleResetOnRotate();
-  });
-
-  // Fallback: solo si realmente cambió portrait/landscape (evita pinch/resize)
-  window.addEventListener('resize', () => {
-    const nowPortrait = window.matchMedia('(orientation: portrait)').matches;
-    if (nowPortrait !== lastPortrait) {
-      lastPortrait = nowPortrait;
-      scheduleResetOnRotate();
-    }
-  });
+  // 3) MatchMedia (muy fiable y NO se dispara por pinch-zoom)
+  const mql = window.matchMedia('(orientation: portrait)');
+  if (mql.addEventListener) mql.addEventListener('change', closeOnRotate);
+  else if (mql.addListener) mql.addListener(closeOnRotate); // Safari viejo
 
   // ======================
   // 4) Gestos: pinch zoom + pan + swipe solo en borde cuando hay zoom
