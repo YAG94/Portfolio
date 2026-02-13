@@ -159,7 +159,12 @@ document.addEventListener('DOMContentLoaded', () => {
         touch-action:none;
       }
       .lb.open{ display:flex; }
+
+      /* Imagen debajo */
       .lbImg{
+        position:relative;
+        z-index:1;
+
         max-width:min(96vw,1200px);
         max-height:88vh;
         border-radius:14px;
@@ -169,8 +174,12 @@ document.addEventListener('DOMContentLoaded', () => {
         transform-origin:center center;
         will-change: transform;
       }
+
+      /* Botones SIEMPRE por encima */
       .lbClose,.lbPrev,.lbNext{
         position:absolute;
+        z-index:10;
+
         border:1px solid rgba(255,255,255,.14);
         background:rgba(255,255,255,.08);
         color:#fff;
@@ -182,7 +191,15 @@ document.addEventListener('DOMContentLoaded', () => {
       .lbClose{ top:14px; right:14px; font-size:28px; line-height:1; }
       .lbPrev{ left:14px; font-size:28px; }
       .lbNext{ right:14px; font-size:28px; }
-      .lbCounter{ position:absolute; bottom:14px; color:rgba(255,255,255,.85); font-size:13px; }
+
+      .lbCounter{
+        position:absolute;
+        z-index:10;
+        bottom:14px;
+        color:rgba(255,255,255,.85);
+        font-size:13px;
+      }
+
       .slide img{ cursor: zoom-in; }
     `;
     document.head.appendChild(st);
@@ -240,7 +257,6 @@ document.addEventListener('DOMContentLoaded', () => {
   let scale = 1, tx = 0, ty = 0;
   let baseW = 0, baseH = 0;
 
-  // IMPORTANTE: para NO resetear zoom al cargar
   let userInteracted = false;
 
   function measureBaseSize() {
@@ -327,14 +343,14 @@ document.addEventListener('DOMContentLoaded', () => {
   lbNext.addEventListener('touchstart', (e) => { e.preventDefault(); e.stopPropagation(); nextLB(); }, { passive: false });
 
   // ======================
-  // ✅ RESET AL GIRAR / RESIZE (lo que pediste)
+  // ✅ RESET SOLO CUANDO CAMBIA LA ORIENTACIÓN (no por pinch-zoom)
   // ======================
   function resetViewOnRotate() {
     if (!lb.classList.contains('open')) return;
+
     userInteracted = false;
     resetZoom();
 
-    // Espera a que el layout se estabilice tras girar
     requestAnimationFrame(() => {
       measureBaseSize();
       resetZoom();
@@ -346,13 +362,26 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   let rotateTimer = null;
-  function scheduleResetView() {
+  function scheduleResetOnRotate() {
     clearTimeout(rotateTimer);
-    rotateTimer = setTimeout(resetViewOnRotate, 120);
+    rotateTimer = setTimeout(resetViewOnRotate, 200);
   }
 
-  window.addEventListener('orientationchange', scheduleResetView);
-  window.addEventListener('resize', scheduleResetView);
+  let lastPortrait = window.matchMedia('(orientation: portrait)').matches;
+
+  window.addEventListener('orientationchange', () => {
+    lastPortrait = window.matchMedia('(orientation: portrait)').matches;
+    scheduleResetOnRotate();
+  });
+
+  // Fallback: solo si realmente cambió portrait/landscape (evita pinch/resize)
+  window.addEventListener('resize', () => {
+    const nowPortrait = window.matchMedia('(orientation: portrait)').matches;
+    if (nowPortrait !== lastPortrait) {
+      lastPortrait = nowPortrait;
+      scheduleResetOnRotate();
+    }
+  });
 
   // ======================
   // 4) Gestos: pinch zoom + pan + swipe solo en borde cuando hay zoom
@@ -375,8 +404,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
   lb.addEventListener('touchstart', (e) => {
     if (!lb.classList.contains('open')) return;
-
-    // no bloquear los botones
     if (e.target.closest('.lbClose, .lbPrev, .lbNext')) return;
 
     e.preventDefault();
@@ -404,7 +431,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
   lb.addEventListener('touchmove', (e) => {
     if (!lb.classList.contains('open')) return;
-
     if (e.target.closest('.lbClose, .lbPrev, .lbNext')) return;
 
     e.preventDefault();
