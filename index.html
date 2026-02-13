@@ -142,17 +142,13 @@
   </main>
 <script>
 document.addEventListener('DOMContentLoaded', () => {
-  // ======================
-  // 0) Helpers
-  // ======================
   const clamp = (v, min, max) => Math.max(min, Math.min(max, v));
 
   // ======================
-  // 1) Lightbox (crear si no existe) + CSS
+  // 1) Lightbox: crea HTML+CSS si no existen
   // ======================
   let lb = document.getElementById('lightbox');
 
-  // Inyecta CSS del lightbox (una sola vez)
   if (!document.getElementById('lb-style')) {
     const st = document.createElement('style');
     st.id = 'lb-style';
@@ -162,7 +158,7 @@ document.addEventListener('DOMContentLoaded', () => {
         background:rgba(0,0,0,.86);
         align-items:center; justify-content:center; padding:16px;
         overscroll-behavior:contain;
-        touch-action:none; /* clave: evita que el fondo se mueva en móvil */
+        touch-action:none;
       }
       .lb.open{ display:flex; }
       .lbImg{
@@ -189,13 +185,11 @@ document.addEventListener('DOMContentLoaded', () => {
       .lbPrev{ left:14px; font-size:28px; }
       .lbNext{ right:14px; font-size:28px; }
       .lbCounter{ position:absolute; bottom:14px; color:rgba(255,255,255,.85); font-size:13px; }
-
       .slide img{ cursor: zoom-in; }
     `;
     document.head.appendChild(st);
   }
 
-  // Inyecta HTML del lightbox si no existe
   if (!lb) {
     lb = document.createElement('div');
     lb.id = 'lightbox';
@@ -218,7 +212,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const lbCounter = lb.querySelector('.lbCounter');
 
   // ======================
-  // 2) Bloqueo de scroll de fondo
+  // 2) Bloqueo de scroll del fondo (iOS friendly)
   // ======================
   let savedScrollY = 0;
   function lockBodyScroll() {
@@ -239,39 +233,30 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // ======================
-  // 3) Estado del lightbox
+  // 3) Estado del visor
   // ======================
   let currentImages = [];
   let currentIndex = 0;
 
-  // Zoom/pan state (custom)
-  let scale = 1;
-  let tx = 0;
-  let ty = 0;
+  // Zoom/Pan
+  let scale = 1, tx = 0, ty = 0;
+  let baseW = 0, baseH = 0;
 
-  // Para calcular bordes en base al tamaño renderizado a scale=1
-  let baseW = 0;
-  let baseH = 0;
+  // IMPORTANTE: para NO resetear zoom al cargar
+  let userInteracted = false;
 
   function measureBaseSize() {
-    // mide el tamaño visible del img con scale=1
-    const r = lbImg.getBoundingClientRect();
-    baseW = r.width;
-    baseH = r.height;
+    // offsetWidth/Height NO se ven afectados por transform (perfecto para calcular límites)
+    baseW = lbImg.offsetWidth || lbImg.getBoundingClientRect().width || 0;
+    baseH = lbImg.offsetHeight || lbImg.getBoundingClientRect().height || 0;
   }
 
-  function maxPanX() {
-    return Math.max(0, (baseW * (scale - 1)) / 2);
-  }
-  function maxPanY() {
-    return Math.max(0, (baseH * (scale - 1)) / 2);
-  }
+  function maxPanX() { return Math.max(0, (baseW * (scale - 1)) / 2); }
+  function maxPanY() { return Math.max(0, (baseH * (scale - 1)) / 2); }
 
   function clampPan() {
-    const mx = maxPanX();
-    const my = maxPanY();
-    tx = clamp(tx, -mx, mx);
-    ty = clamp(ty, -my, my);
+    tx = clamp(tx, -maxPanX(), maxPanX());
+    ty = clamp(ty, -maxPanY(), maxPanY());
   }
 
   function applyTransform() {
@@ -279,34 +264,44 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function resetZoom() {
-    scale = 1;
-    tx = 0;
-    ty = 0;
+    scale = 1; tx = 0; ty = 0;
     applyTransform();
   }
 
   function showLB() {
-    lbImg.src = currentImages[currentIndex];
+    userInteracted = false;          // resetea bandera AL MOSTRAR NUEVA FOTO
     lbCounter.textContent = `${currentIndex + 1} / ${currentImages.length}`;
 
-    // cuando cargue la imagen, mide tamaño base y resetea zoom
+    // PON el onload ANTES del src, para evitar carreras
     lbImg.onload = () => {
-      resetZoom();
-      // espera un frame para que el layout esté estable
-      requestAnimationFrame(() => {
-        measureBaseSize();
+      measureBaseSize();
+      // si el usuario ya hizo pinch/pan antes de que cargara, NO reseteamos
+      if (!userInteracted) {
         resetZoom();
-      });
+      } else {
+        clampPan();
+        applyTransform();
+      }
     };
+
+    // (opcional) por si hay caché y no dispara onload en algunos casos
+    requestAnimationFrame(() => {
+      measureBaseSize();
+      clampPan();
+      applyTransform();
+    });
+
+    lbImg.src = currentImages[currentIndex];
   }
 
   function openLB(images, idx) {
     currentImages = images;
     currentIndex = idx;
+
     lb.classList.add('open');
     lb.setAttribute('aria-hidden', 'false');
-
     lockBodyScroll();
+
     showLB();
   }
 
@@ -332,12 +327,10 @@ document.addEventListener('DOMContentLoaded', () => {
   lbPrev.addEventListener('click', prevLB);
   lbNext.addEventListener('click', nextLB);
 
-  // Cerrar tocando el fondo
   lb.addEventListener('click', (e) => {
     if (e.target === lb) closeLB();
   });
 
-  // Teclas (PC)
   document.addEventListener('keydown', (e) => {
     if (!lb.classList.contains('open')) return;
     if (e.key === 'Escape') closeLB();
@@ -346,22 +339,19 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   // ======================
-  // 4) Gestos táctiles: pinch zoom + pan + swipe SOLO en borde
+  // 4) Gestos: pinch zoom + pan + swipe solo en borde cuando hay zoom
   // ======================
-  let mode = 'none'; // 'pinch' | 'pan' | 'swipe'
-  let startX = 0, startY = 0;
-  let startTx = 0, startTy = 0;
+  let mode = 'none';
+  let startX = 0, startY = 0, startTx = 0, startTy = 0;
   let lastDx = 0, lastDy = 0;
 
   let pinchStartDist = 0;
   let pinchStartScale = 1;
 
-  let edgeSwipeX = 0; // acumula solo cuando ya estás en borde y sigues arrastrando
-  const EDGE_SWIPE_THRESHOLD = 70; // más alto = menos cambios accidentales
+  let edgeSwipeX = 0;
+  const EDGE_SWIPE_THRESHOLD = 70;
 
-  let lastTapTime = 0;
-
-  function dist2Touches(t1, t2) {
+  function dist2(t1, t2) {
     const dx = t2.clientX - t1.clientX;
     const dy = t2.clientY - t1.clientY;
     return Math.hypot(dx, dy);
@@ -371,9 +361,11 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!lb.classList.contains('open')) return;
     e.preventDefault();
 
+    userInteracted = true; // ← clave: desde que toca, ya no debe resetear por carga tardía
+
     if (e.touches.length === 2) {
       mode = 'pinch';
-      pinchStartDist = dist2Touches(e.touches[0], e.touches[1]);
+      pinchStartDist = dist2(e.touches[0], e.touches[1]);
       pinchStartScale = scale;
       edgeSwipeX = 0;
       return;
@@ -395,18 +387,17 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!lb.classList.contains('open')) return;
     e.preventDefault();
 
-    // Pinch zoom (2 dedos)
+    userInteracted = true;
+
     if (mode === 'pinch' && e.touches.length === 2) {
-      const d = dist2Touches(e.touches[0], e.touches[1]);
+      const d = dist2(e.touches[0], e.touches[1]);
       const factor = d / (pinchStartDist || d);
       scale = clamp(pinchStartScale * factor, 1, 4);
-
       clampPan();
       applyTransform();
       return;
     }
 
-    // 1 dedo
     if (e.touches.length === 1) {
       const x = e.touches[0].clientX;
       const y = e.touches[0].clientY;
@@ -415,12 +406,10 @@ document.addEventListener('DOMContentLoaded', () => {
       lastDx = dx;
       lastDy = dy;
 
-      // Si hay zoom: PAN normal, y SOLO pasar imagen si empujas más allá del borde
       if (scale > 1) {
         const mx = maxPanX();
         const my = maxPanY();
 
-        // Intento de pan
         const proposedTx = startTx + dx;
         const proposedTy = startTy + dy;
 
@@ -433,38 +422,20 @@ document.addEventListener('DOMContentLoaded', () => {
         ty = clampedTy;
         applyTransform();
 
-        // Si estás en borde y sigues empujando, acumula para cambiar de foto
-        if (hitXEdge) {
-          edgeSwipeX += dx;
-        } else {
-          edgeSwipeX = 0;
-        }
+        if (hitXEdge) edgeSwipeX += dx;
+        else edgeSwipeX = 0;
 
         return;
       }
-
-      // Sin zoom: no hacemos nada aquí; decidimos en touchend si fue swipe
     }
   }, { passive: false });
 
   lb.addEventListener('touchend', (e) => {
     if (!lb.classList.contains('open')) return;
 
-    // Doble tap para resetear zoom (si te viene bien)
-    const now = Date.now();
-    if (e.touches.length === 0 && now - lastTapTime < 280) {
-      resetZoom();
-      edgeSwipeX = 0;
-      lastTapTime = 0;
-      return;
-    }
-    lastTapTime = now;
-
-    // Si estabas con zoom, solo pasa si hubo edgeSwipe fuerte
+    // Con zoom: solo cambia si empujas en el borde
     if (scale > 1) {
       if (Math.abs(edgeSwipeX) > EDGE_SWIPE_THRESHOLD) {
-        // edgeSwipeX>0 => empujaste hacia la derecha en borde derecho => prev
-        // edgeSwipeX<0 => empujaste hacia la izquierda en borde izquierdo => next
         if (edgeSwipeX > 0) prevLB();
         else nextLB();
       }
@@ -473,7 +444,7 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
 
-    // Sin zoom: swipe normal para cambiar
+    // Sin zoom: swipe normal
     if (Math.abs(lastDx) > 45 && Math.abs(lastDx) > Math.abs(lastDy)) {
       if (lastDx > 0) prevLB();
       else nextLB();
@@ -483,15 +454,13 @@ document.addEventListener('DOMContentLoaded', () => {
   }, { passive: false });
 
   // ======================
-  // 5) Renderizar carruseles
+  // 5) Render carruseles
   // ======================
   document.querySelectorAll('.carousel').forEach((c) => {
     if (c.querySelector('.track')) return;
 
-    const raw = c.getAttribute('data-images') || '[]';
     let imgs = [];
-    try { imgs = JSON.parse(raw); } catch { imgs = []; }
-
+    try { imgs = JSON.parse(c.getAttribute('data-images') || '[]'); } catch { imgs = []; }
     if (!imgs.length) return;
 
     const track = document.createElement('div');
@@ -515,13 +484,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     c.appendChild(track);
 
-    // Controles (PC)
     const controls = document.createElement('div');
     controls.className = 'controls';
-
     const prev = document.createElement('button');
     prev.textContent = '←';
-
     const next = document.createElement('button');
     next.textContent = '→';
 
@@ -533,9 +499,9 @@ document.addEventListener('DOMContentLoaded', () => {
     controls.appendChild(next);
     c.appendChild(controls);
   });
-
 });
 </script>
+
 
 </body>
 </html>
