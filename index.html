@@ -140,7 +140,167 @@
       <div style="margin-top:8px">Alcalá de Henares · Madrid</div>
     </footer>
   </main>
-  
+  <script>
+document.addEventListener('DOMContentLoaded', () => {
+
+  // ---------- 1) Crear Lightbox si no existe ----------
+  let lb = document.getElementById('lightbox');
+  if (!lb) {
+    // CSS del lightbox (inyectado)
+    const st = document.createElement('style');
+    st.textContent = `
+      .lb{position:fixed;inset:0;display:none;background:rgba(0,0,0,.86);z-index:9999;align-items:center;justify-content:center;padding:16px}
+      .lb.open{display:flex}
+      .lbImg{max-width:min(96vw,1200px);max-height:88vh;border-radius:14px;background:#111;box-shadow:0 10px 30px rgba(0,0,0,.45)}
+      .lbClose,.lbPrev,.lbNext{position:absolute;border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.08);color:#fff;width:44px;height:44px;border-radius:12px;cursor:pointer}
+      .lbClose{top:14px;right:14px;font-size:28px;line-height:1}
+      .lbPrev{left:14px;font-size:28px}
+      .lbNext{right:14px;font-size:28px}
+      .lbCounter{position:absolute;bottom:14px;color:rgba(255,255,255,.85);font-size:13px}
+      .slide img{cursor:zoom-in}
+    `;
+    document.head.appendChild(st);
+
+    // HTML del lightbox (inyectado)
+    lb = document.createElement('div');
+    lb.id = 'lightbox';
+    lb.className = 'lb';
+    lb.setAttribute('aria-hidden', 'true');
+    lb.innerHTML = `
+      <button class="lbClose" type="button" aria-label="Cerrar">×</button>
+      <button class="lbPrev" type="button" aria-label="Anterior">‹</button>
+      <img class="lbImg" alt="Vista ampliada">
+      <button class="lbNext" type="button" aria-label="Siguiente">›</button>
+      <div class="lbCounter"></div>
+    `;
+    document.body.appendChild(lb);
+  }
+
+  const lbImg = lb.querySelector('.lbImg');
+  const lbClose = lb.querySelector('.lbClose');
+  const lbPrev = lb.querySelector('.lbPrev');
+  const lbNext = lb.querySelector('.lbNext');
+  const lbCounter = lb.querySelector('.lbCounter');
+
+  let currentImages = [];
+  let currentIndex = 0;
+
+  function show() {
+    lbImg.src = currentImages[currentIndex];
+    lbCounter.textContent = `${currentIndex + 1} / ${currentImages.length}`;
+  }
+  function openLB(images, idx) {
+    currentImages = images;
+    currentIndex = idx;
+    lb.classList.add('open');
+    lb.setAttribute('aria-hidden', 'false');
+    show();
+  }
+  function closeLB() {
+    lb.classList.remove('open');
+    lb.setAttribute('aria-hidden', 'true');
+    lbImg.src = '';
+  }
+  function prevLB() {
+    currentIndex = (currentIndex - 1 + currentImages.length) % currentImages.length;
+    show();
+  }
+  function nextLB() {
+    currentIndex = (currentIndex + 1) % currentImages.length;
+    show();
+  }
+
+  lbClose.addEventListener('click', closeLB);
+  lbPrev.addEventListener('click', prevLB);
+  lbNext.addEventListener('click', nextLB);
+
+  // Cerrar tocando el fondo
+  lb.addEventListener('click', (e) => {
+    if (e.target === lb) closeLB();
+  });
+
+  // Teclas (PC)
+  document.addEventListener('keydown', (e) => {
+    if (!lb.classList.contains('open')) return;
+    if (e.key === 'Escape') closeLB();
+    if (e.key === 'ArrowLeft') prevLB();
+    if (e.key === 'ArrowRight') nextLB();
+  });
+
+  // Swipe (móvil)
+  let startX = null;
+  lb.addEventListener('touchstart', (e) => {
+    if (!lb.classList.contains('open')) return;
+    startX = e.touches[0].clientX;
+  }, { passive: true });
+
+  lb.addEventListener('touchend', (e) => {
+    if (!lb.classList.contains('open') || startX === null) return;
+    const endX = e.changedTouches[0].clientX;
+    const dx = endX - startX;
+    startX = null;
+    if (Math.abs(dx) > 45) dx > 0 ? prevLB() : nextLB();
+  }, { passive: true });
+
+  // ---------- 2) Renderizar carruseles ----------
+  document.querySelectorAll('.carousel').forEach((c) => {
+    // Evitar duplicar si ya existe
+    if (c.querySelector('.track')) return;
+
+    const raw = c.getAttribute('data-images') || '[]';
+    let imgs = [];
+    try {
+      imgs = JSON.parse(raw);
+    } catch (err) {
+      console.error('Error parseando data-images:', raw, err);
+      imgs = [];
+    }
+
+    // Si no hay imágenes, no hacemos nada
+    if (!imgs.length) return;
+
+    const track = document.createElement('div');
+    track.className = 'track';
+
+    imgs.forEach((src, idx) => {
+      const slide = document.createElement('div');
+      slide.className = 'slide';
+
+      const img = document.createElement('img');
+      img.loading = 'lazy';
+      img.decoding = 'async';
+      img.src = src;
+      img.alt = '';
+
+      // Click => abrir ampliada en el índice correcto
+      img.addEventListener('click', () => openLB(imgs, idx));
+
+      slide.appendChild(img);
+      track.appendChild(slide);
+    });
+
+    c.appendChild(track);
+
+    // Controles (PC)
+    const controls = document.createElement('div');
+    controls.className = 'controls';
+
+    const prev = document.createElement('button');
+    prev.textContent = '←';
+
+    const next = document.createElement('button');
+    next.textContent = '→';
+
+    const scrollBy = () => Math.min(track.clientWidth * 0.9, 900);
+    prev.onclick = () => track.scrollBy({ left: -scrollBy(), behavior: 'smooth' });
+    next.onclick = () => track.scrollBy({ left:  scrollBy(), behavior: 'smooth' });
+
+    controls.appendChild(prev);
+    controls.appendChild(next);
+    c.appendChild(controls);
+  });
+
+});
 </script>
 </body>
 </html>
